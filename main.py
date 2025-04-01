@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import requests
 from datetime import datetime
 
+global id
 id = 0
 app = Flask(__name__)
 
