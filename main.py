@@ -1,12 +1,18 @@
 from flask import Flask, request, jsonify
 import requests
+from datetime import datetime
 
+id = 0
 app = Flask(__name__)
 
 @app.route('/', methods=['POST'])
 def forward_request():
     # Extract data from incoming POST request
+
     incoming_data = request.get_json()
+    incoming_data['time_sent'] = datetime.now().isoformat()
+    incoming_data['id'] = id
+    id += 1
 
     # Forward data to localhost:9092
     while True:
