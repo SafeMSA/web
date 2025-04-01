@@ -2,13 +2,13 @@ from flask import Flask, request, jsonify
 import requests
 from datetime import datetime
 
-global id
 id = 0
 app = Flask(__name__)
 
 @app.route('/', methods=['POST'])
 def forward_request():
     # Extract data from incoming POST request
+    global id
 
     incoming_data = request.get_json()
     incoming_data['time_sent'] = datetime.now().isoformat()
