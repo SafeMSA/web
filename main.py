@@ -6,7 +6,7 @@ from datetime import datetime
 id = 0
 app = Flask(__name__)
 
-# Create an asynchronous function for forwarding the request
+# Async function to forward the request
 async def forward_request_async(incoming_data):
     try:
         async with aiohttp.ClientSession() as session:
