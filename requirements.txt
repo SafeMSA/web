@@ -1,3 +1,2 @@
-Flask[async]>=2.0.0
+Flask
 requests
-aiohttp
