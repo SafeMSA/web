@@ -1,32 +1,43 @@
 from flask import Flask, request, jsonify
 import requests
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+import threading
+import time
 
-id = 0
 app = Flask(__name__)
+executor = ThreadPoolExecutor(max_workers=200)
+id_lock = threading.Lock()
+id_counter = 0
 
-@app.route('/', methods=['POST'])
-def forward_request():
-    # Extract data from incoming POST request
-    global id
-
-    incoming_data = request.get_json()
-    incoming_data['time_sent'] = datetime.now().isoformat()
-    incoming_data['id'] = id
-    id += 1
-
-    # Forward data to localhost:9092
+def forward_to_target(data):
+    """Retries until the target service is available."""
     while True:
         try:
-            response = requests.post('http://localhost:9092', json=incoming_data)
+            response = requests.post('http://localhost:9092', json=data)
+            if response.status_code == 50:
+                print(f"Successfully forwarded ID {data['id']}")
+                break
+        except requests.exceptions.RequestException:
+            print(f"Retrying ID {data['id']}...")
+        time.sleep(1)  # Avoid spamming too fast
 
-            # Return response from localhost:9092 to the client
-            if response.status_code == 200:
-                return jsonify(response.json()), response.status_code
-            
-        except requests.exceptions.RequestException as e:
-            print("Failed to POST")
-            #return jsonify({"error": f"Failed to forward request: {str(e)}"}), 500
+@app.route('/', methods=['POST'])
+def handle_request():
+    global id_counter
+
+    data = request.get_json()
+    data['time_sent'] = datetime.now().isoformat()
+
+    with id_lock:
+        data['id'] = id_counter
+        id_counter += 1
+
+    # Submit the forwarding job to a background thread
+    executor.submit(forward_to_target, data)
+
+    # Immediately respond to the client
+    return jsonify({"status": "Accepted", "id": data['id']}), 202
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=9091)
+    app.run(host='0.0.0.0', port=9091, threaded=True)
