@@ -6,8 +6,7 @@ import threading
 import time
 
 app = Flask(__name__)
-executor = ThreadPoolExecutor(max_workers=200)
-id_lock = threading.Lock()
+executor = ThreadPoolExecutor(max_workers=50)
 id_counter = 0
 
 def forward_to_target(data):
@@ -15,7 +14,7 @@ def forward_to_target(data):
     while True:
         try:
             response = requests.post('http://localhost:9092', json=data)
-            if response.status_code == 50:
+            if response.status_code == 200:
                 print(f"Successfully forwarded ID {data['id']}")
                 break
         except requests.exceptions.RequestException:
@@ -29,15 +28,15 @@ def handle_request():
     data = request.get_json()
     data['time_sent'] = datetime.now().isoformat()
 
-    with id_lock:
-        data['id'] = id_counter
-        id_counter += 1
+    
+    data['id'] = id_counter
+    id_counter += 1
 
     # Submit the forwarding job to a background thread
     executor.submit(forward_to_target, data)
 
     # Immediately respond to the client
-    return jsonify({"status": "Accepted", "id": data['id']}), 202
+    return jsonify({"status": "Accepted", "id": data['id']}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=9091, threaded=True)
+    app.run(host='0.0.0.0', port=9091)
